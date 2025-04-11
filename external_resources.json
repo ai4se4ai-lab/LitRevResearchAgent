@@ -1,0 +1,100 @@
+{
+  "sources": [
+    {
+      "name": "IEEE Xplore",
+      "type": "ieee",
+      "url": "https://ieeexplore.ieee.org",
+      "description": "IEEE's digital library containing technical literature in electrical engineering, computer science, and related fields",
+      "search_pattern": "https://ieeexplore.ieee.org/search/searchresult.jsp?queryText={query}",
+      "requires_credentials": false,
+      "priority": 1
+    },
+    {
+      "name": "PubMed",
+      "type": "web",
+      "url": "https://pubmed.ncbi.nlm.nih.gov",
+      "description": "Database of biomedical literature maintained by the National Center for Biotechnology Information (NCBI)",
+      "search_pattern": "https://pubmed.ncbi.nlm.nih.gov/?term={query}",
+      "requires_credentials": false,
+      "priority": 2
+    },
+    {
+      "name": "ACM Digital Library",
+      "type": "web",
+      "url": "https://dl.acm.org",
+      "description": "Library of publications from the Association for Computing Machinery",
+      "search_pattern": "https://dl.acm.org/action/doSearch?AllField={query}",
+      "requires_credentials": false,
+      "priority": 3
+    },
+    {
+      "name": "Nature Digital",
+      "type": "web",
+      "url": "https://www.nature.com",
+      "description": "Scientific journal covering a wide range of scientific disciplines",
+      "search_pattern": "https://www.nature.com/search?q={query}",
+      "requires_credentials": false,
+      "priority": 4
+    },
+    {
+      "name": "Science Direct",
+      "type": "web",
+      "url": "https://www.sciencedirect.com",
+      "description": "Elsevier's database of scientific and medical research",
+      "search_pattern": "https://www.sciencedirect.com/search?qs={query}",
+      "requires_credentials": false,
+      "priority": 5
+    },
+    {
+      "name": "medRxiv",
+      "type": "web",
+      "url": "https://www.medrxiv.org",
+      "description": "Preprint server for health sciences",
+      "search_pattern": "https://www.medrxiv.org/search/{query}",
+      "requires_credentials": false,
+      "priority": 6
+    }
+  ],
+  "databases": [
+    {
+      "name": "HuggingFace Datasets",
+      "url": "https://huggingface.co/datasets",
+      "api_endpoint": "https://huggingface.co/api/datasets",
+      "description": "Repository of machine learning datasets",
+      "requires_api_key": false
+    },
+    {
+      "name": "Kaggle Datasets",
+      "url": "https://www.kaggle.com/datasets",
+      "api_endpoint": "https://www.kaggle.com/api/v1/datasets/list",
+      "description": "Data science competition and dataset platform",
+      "requires_api_key": true
+    },
+    {
+      "name": "Google Dataset Search",
+      "url": "https://datasetsearch.research.google.com",
+      "description": "Search engine for datasets",
+      "requires_api_key": false
+    }
+  ],
+  "tools": [
+    {
+      "name": "Semantic Scholar API",
+      "url": "https://api.semanticscholar.org",
+      "description": "API for accessing research papers from Semantic Scholar",
+      "requires_api_key": true
+    },
+    {
+      "name": "Crossref API",
+      "url": "https://api.crossref.org",
+      "description": "API for accessing academic citation data",
+      "requires_api_key": false
+    },
+    {
+      "name": "OpenAlex API",
+      "url": "https://api.openalex.org",
+      "description": "Open API for scholarly metadata",
+      "requires_api_key": false
+    }
+  ]
+}

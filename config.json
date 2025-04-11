@@ -1,0 +1,68 @@
+{
+  "task_description": "Conduct a comprehensive literature review on observability and explainability in DevOps and software engineering. Analyze current approaches, tools, frameworks, and methodologies used to enhance system transparency, troubleshooting, and understanding of complex software systems. Identify key trends, challenges, and research opportunities in this domain.",
+  "research_question": "How are observability and explainability principles being implemented in DevOps and software engineering practices, what are the current challenges, and what research gaps exist in connecting these concepts to modern software development lifecycles?",
+  "api_keys": {
+    "openai": "OPENAI_API_KEY"
+  },
+  "search_settings": {
+    "search_terms": [
+      "trustworthy software engineering",
+      "explainable software systems",
+      "DevOps observability",
+      "explainability in software engineering",
+      "observability software engineering",
+      "explainability DevOps",
+      "software system transparency",
+      "monitoring visualization DevOps",
+      "distributed tracing software engineering",
+      "explainable AI software systems",
+      "DevOps observability tools",
+      "software debugging explainability",
+      "software telemetry analysis",
+      "continuous monitoring DevOps"
+    ],
+    "search_sources": [
+      "arxiv",
+      "google_scholar",
+      "ieee",
+      "acm",
+      "sciencedirect"
+    ],
+    "max_papers_per_source": 15,
+    "max_papers_total": 60,
+    "start_year": 2017,
+    "end_year": 2025,
+    "sort_by": "relevance",
+    "delay_between_requests": 3
+  },
+  "model_settings": {
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "max_tokens": 4000
+  },
+  "analysis_settings": {
+    "clustering_enabled": true,
+    "topic_modeling_enabled": true,
+    "sentiment_analysis_enabled": false,
+    "citation_network_enabled": true,
+    "author_collaboration_analysis": true,
+    "trend_analysis_timeframe": "yearly"
+  },
+  "visualization_settings": {
+    "generate_wordcloud": true,
+    "generate_trend_charts": true,
+    "generate_citation_network": true,
+    "generate_topic_clusters": true,
+    "chart_style": "seaborn",
+    "color_palette": "viridis"
+  },
+  "output_preferences": {
+    "report_format": "markdown",
+    "include_visuals": true,
+    "include_tables": true,
+    "include_executive_summary": true,
+    "max_report_length": 12000,
+    "citation_style": "APA",
+    "include_appendices": true
+  }
+}
