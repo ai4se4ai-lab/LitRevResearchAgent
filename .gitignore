@@ -22,3 +22,4 @@ Figure*.png
 testrun.py
 agent_times_1.txt
 litrevra.log
+.roo/*

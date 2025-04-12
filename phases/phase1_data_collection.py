@@ -62,6 +62,7 @@ class LiteratureCollector:
         
         # Set up OpenAI API
         openai.api_key = config['api_keys']['openai']
+        os.environ["OPENAI_API_KEY"] = openai.api_key
         
         # Initialize data storage
         self.literature_data = {
@@ -180,6 +181,7 @@ class LiteratureCollector:
         # Distribute paper collection across sources
         papers_per_source = max(5, self.max_papers // len(self.sources))
 
+        # Researcher 1: arxiv
         A121_agent = LlmAgent(
             name="arxiv",
             model=OPENAI_MODEL,
@@ -190,32 +192,32 @@ class LiteratureCollector:
             Output *only* the details of the most relevant papers.
             """,
             description="arxiv researcher.",
-            tools=[self._collect_from_arxiv(max_papers=papers_per_source)], # Provide the search tool
+            tools=[self._collect_from_arxiv], # Provide the search tool
             # Save the result to session state
             output_key="arxiv_result"
         )
 
-        # Researcher 2: Electric Vehicles
-        A122_agent = LlmAgent(
-            name="google_scholar",
-            model=OPENAI_MODEL,
-            instruction=f"""You are an AI Research Assistant specializing in searching relevant papers in google_scholar.
-            Research the latest advancements in {self.literature_data['search_metadata']['search_terms']}.
-            Use the function and Search tool provided and collecte *only* {papers_per_source} papers.
-            Summarize your key findings concisely (1-2 sentences).
-            Output *only* the details of the most relevant papers.
-            """,
-            description="google_scholar researcher.",
-            tools=[self._collect_from_google_scholar(max_papers=papers_per_source)], # Provide the search tool
-            # Save the result to session state
-            output_key="google_scholar_result"
-        )
+        # # Researcher 2: google_scholar
+        # A122_agent = LlmAgent(
+        #     name="google_scholar",
+        #     model=OPENAI_MODEL,
+        #     instruction=f"""You are an AI Research Assistant specializing in searching relevant papers in google_scholar.
+        #     Research the latest advancements in {self.literature_data['search_metadata']['search_terms']}.
+        #     Use the function and Search tool provided and collecte *only* {papers_per_source} papers.
+        #     Summarize your key findings concisely (1-2 sentences).
+        #     Output *only* the details of the most relevant papers.
+        #     """,
+        #     description="google_scholar researcher.",
+        #     tools=[self._collect_from_arxiv], # Provide the search tool
+        #     # Save the result to session state
+        #     output_key="google_scholar_result"
+        # )
         
         # --- Create the ParallelAgent ---
         # This agent orchestrates the concurrent execution of the researchers.
         parallel_research_agent = ParallelAgent(
             name="ParallelWebResearchAgent",
-            sub_agents=[A121_agent, A122_agent]
+            sub_agents=[A121_agent]
         )
 
         # Session and Runner
@@ -258,7 +260,7 @@ class LiteratureCollector:
             
         return self.literature_data
     
-    def _collect_from_arxiv(self, max_papers):
+    def _collect_from_arxiv(self):
         """
         Collect papers from ArXiv.
         
@@ -276,7 +278,7 @@ class LiteratureCollector:
                 # Prepare search query
                 search = arxiv.Search(
                     query=term,
-                    max_results=max_papers,
+                    max_results=self.max_papers,
                     sort_by=arxiv.SortCriterion.Relevance
                 )
                 
@@ -305,12 +307,10 @@ class LiteratureCollector:
         except Exception as e:
             logger.error(f"Error collecting papers from arXiv: {str(e)}")
     
-    def _collect_from_google_scholar(self, max_papers):
+    def _collect_from_google_scholar(self):
         """
         Collect papers from Google Scholar.
         
-        Args:
-            max_papers (int): Maximum number of papers to collect
         """
         try:
             for term in self.literature_data['search_metadata']['search_terms']:
