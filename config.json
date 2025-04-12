@@ -5,28 +5,10 @@
     "openai": "OPENAI_API_KEY"
   },
   "search_settings": {
-    "search_terms": [
-      "trustworthy software engineering",
-      "explainable software systems",
-      "DevOps observability",
-      "explainability in software engineering",
-      "observability software engineering",
-      "explainability DevOps",
-      "software system transparency",
-      "monitoring visualization DevOps",
-      "distributed tracing software engineering",
-      "explainable AI software systems",
-      "DevOps observability tools",
-      "software debugging explainability",
-      "software telemetry analysis",
-      "continuous monitoring DevOps"
-    ],
+    "search_terms": [],
     "search_sources": [
       "arxiv",
-      "google_scholar",
-      "ieee",
-      "acm",
-      "sciencedirect"
+      "google_scholar"
     ],
     "max_papers_per_source": 15,
     "max_papers_total": 60,

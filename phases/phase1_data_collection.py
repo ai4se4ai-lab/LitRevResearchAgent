@@ -14,8 +14,39 @@ import requests
 from bs4 import BeautifulSoup
 import arxiv
 from scholarly import scholarly
+#==
+import os
+import json
+import logging
+from pathlib import Path
+from dotenv import load_dotenv
+#--
+from google.adk.agents.sequential_agent import SequentialAgent
+from google.adk.agents.parallel_agent import ParallelAgent
+from google.adk.agents.loop_agent import LoopAgent
+from google.adk.agents.llm_agent import LlmAgent
+from google.genai import types
+from google.adk.sessions import InMemorySessionService
+from google.adk.runners import Runner
+#--
+from google.adk.models.lite_llm import LiteLlm
+from google.adk.tools import google_search
+
 
 logger = logging.getLogger("LitRevRA.Phase1")
+
+# --- Constants ---
+APP_NAME = "code_pipeline_app"
+USER_ID = "dev_user_01"
+SESSION_ID_SEARCH_TERMS = "loop_search_terms_session_01"
+SESSION_ID_COLLECT_LIT = "parllel_collect_literature_session_01"
+
+OPENAI_MODEL = LiteLlm(model="openai/gpt-4o") # LiteLLM model string format
+
+# --- State Keys ---
+STATE_CURRENT_SEARCH_TERMS = "current_search_terms"
+STATE_CRITICISM_SEARCH_TERMS = "criticism"
+
 
 class LiteratureCollector:
     """Class to collect literature data from various sources."""
@@ -68,10 +99,11 @@ class LiteratureCollector:
         """Generate search terms based on the task description using OpenAI."""
         logger.info("Generating search terms using OpenAI")
         
-        prompt = f"""
+        A111_agent_prompt = f"""
         Task: {self.task_description}
-        
-        Based on the above task, generate 5-8 specific search terms or phrases that would be effective 
+        If '{STATE_CURRENT_SEARCH_TERMS}' does NOT exist or is empty, based on the above task, generate 5-8 specific search terms or phrases that would be effective 
+        If '{STATE_CURRENT_SEARCH_TERMS}' *already exists* and '{STATE_CRITICISM_SEARCH_TERMS}', refine '{STATE_CURRENT_SEARCH_TERMS}' according to the comments in '{STATE_CRITICISM_SEARCH_TERMS}'."
+
         for finding relevant academic papers. These search terms should:
         
         1. Be specific enough to yield relevant results
@@ -80,32 +112,58 @@ class LiteratureCollector:
         
         Format your response as a list of search terms, one per line.
         """
-        
-        try:
-            response = openai.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are a research assistant helping to generate effective academic search terms."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-            )
-            
-            # Extract the search terms from the response
-            content = response.choices[0].message.content.strip()
-            search_terms = [term.strip() for term in content.split('\n') if term.strip()]
-            
-            # Update the search terms
-            self.literature_data['search_metadata']['search_terms'] = search_terms
-            logger.info(f"Generated {len(search_terms)} search terms")
-            
-        except Exception as e:
-            logger.error(f"Error generating search terms: {str(e)}")
-            # Fallback to basic terms based on the task
-            basic_terms = [self.task_description]
-            if self.research_question:
-                basic_terms.append(self.research_question)
-            self.literature_data['search_metadata']['search_terms'] = basic_terms
+        A112_agent_prompt = f"""
+        Your task is to assess the clarity, completeness, and effectiveness of the generated and make sure they have to qulaity.
+        Review the document provided in the session state key '{STATE_CURRENT_SEARCH_TERMS}'.
+        Provide 1-2 brief suggestions for improvement for each search term, focusing on the following aspects:
+        1. Relevance Assessment: For each generated search term, assess how likely it is to yield relevant academic papers directly related to the task description. Explain your reasoning for each term.
+        2. Specificity Check: Determine if each search term is specific enough to avoid a large number of irrelevant results. Suggest more specific alternatives if you believe a term is too broad.
+        3. Coverage Analysis: Evaluate whether the set of 5-8 search terms collectively covers the key aspects and different facets of the research task. Identify any potential blind spots or areas that might be missing from the current search terms.
+        4. Technical Terminology: Assess whether the search terms use appropriate technical terminology that would be recognized in academic literature. Suggest any improvements or alternatives.
+        5. Missing Term Identification: Based on your understanding of the task, suggest 2-3 additional search terms that you believe could be valuable in finding relevant academic papers and were not included in the original list. Explain why these terms might be beneficial.
+        """
+        A111_agent = LlmAgent(
+            name="A111_agent",
+            model=OPENAI_MODEL,
+            instruction=f"""You are a PhD student from top university in Computere Science and Software Egnineering.
+            Work professionally *only* based on the given prompt: {A111_agent_prompt}.
+            Output *only* the most relevant search terms.
+            """,
+            description="A PhD student that helps the professor in _generate_search_terms task.",
+            output_key=STATE_CURRENT_SEARCH_TERMS,
+        )
+
+        A112_agent = LlmAgent(
+            name="A112_agent",
+            model=OPENAI_MODEL,
+            instruction=f"""You are a PhD student from top university in Computere Science and Software Egnineering.
+            Work professionally *only* based on the given prompt: {A112_agent_prompt}.
+            Output *only* the critique.
+            """,
+            description="A PhD student that helps the professor in _generate_search_terms task.",
+            output_key=STATE_CRITICISM_SEARCH_TERMS,
+        )
+          
+        # Create the LoopAgent
+        generate_search_terms_loopAgent = LoopAgent(
+            name="generate_search_terms_loopAgent", sub_agents=[A111_agent, A112_agent], max_iterations=2
+        )
+
+        # Session and Runner
+        session_service = InMemorySessionService()
+        session = session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID_SEARCH_TERMS)
+        runner = Runner(agent=generate_search_terms_loopAgent, app_name=APP_NAME, session_service=session_service)
+
+        content = types.Content(role='user', parts=[types.Part(text="execute")])
+        events = runner.run(user_id=USER_ID, session_id=SESSION_ID_SEARCH_TERMS, new_message=content)
+
+        for event in events:
+            if event.is_final_response():
+                final_response = event.content.parts[0].text
+                self.literature_data['search_metadata']['search_terms'] = final_response
+                logger.info(f"Agent_Search_Terms Final Response:  {final_response}")
+
+              
     
     def collect_literature(self):
         """
@@ -115,33 +173,86 @@ class LiteratureCollector:
             dict: The collected literature data
         """
         logger.info("Starting literature collection")
-        
+
         # Collection strategy
         papers_collected = 0
         
         # Distribute paper collection across sources
         papers_per_source = max(5, self.max_papers // len(self.sources))
+
+        A121_agent = LlmAgent(
+            name="arxiv",
+            model=OPENAI_MODEL,
+            instruction=f"""You are an AI Research Assistant specializing in searching relevant papers in arxiv.
+            Research the latest advancements in {self.literature_data['search_metadata']['search_terms']}.
+            Use the function and Search tool provided and collecte *only* {papers_per_source} papers.
+            Summarize your key findings concisely (1-2 sentences).
+            Output *only* the details of the most relevant papers.
+            """,
+            description="arxiv researcher.",
+            tools=[self._collect_from_arxiv(max_papers=papers_per_source)], # Provide the search tool
+            # Save the result to session state
+            output_key="arxiv_result"
+        )
+
+        # Researcher 2: Electric Vehicles
+        A122_agent = LlmAgent(
+            name="google_scholar",
+            model=OPENAI_MODEL,
+            instruction=f"""You are an AI Research Assistant specializing in searching relevant papers in google_scholar.
+            Research the latest advancements in {self.literature_data['search_metadata']['search_terms']}.
+            Use the function and Search tool provided and collecte *only* {papers_per_source} papers.
+            Summarize your key findings concisely (1-2 sentences).
+            Output *only* the details of the most relevant papers.
+            """,
+            description="google_scholar researcher.",
+            tools=[self._collect_from_google_scholar(max_papers=papers_per_source)], # Provide the search tool
+            # Save the result to session state
+            output_key="google_scholar_result"
+        )
         
-        # Collect papers from each source
-        for source in self.sources:
-            if papers_collected >= self.max_papers:
-                break
+        # --- Create the ParallelAgent ---
+        # This agent orchestrates the concurrent execution of the researchers.
+        parallel_research_agent = ParallelAgent(
+            name="ParallelWebResearchAgent",
+            sub_agents=[A121_agent, A122_agent]
+        )
+
+        # Session and Runner
+        session_service = InMemorySessionService()
+        session = session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID_COLLECT_LIT)
+        runner = Runner(agent=parallel_research_agent, app_name=APP_NAME, session_service=session_service)
+
+        content = types.Content(role='user', parts=[types.Part(text="execute")])
+        events = runner.run(user_id=USER_ID, session_id=SESSION_ID_COLLECT_LIT, new_message=content)
+
+        for event in events:
+            if event.is_final_response():
+                final_response = event.content.parts[0].text
+                print("Agent_Lit_Collect Final Response: ", final_response)
+        
+        # # Collect papers from each source
+        # for source in self.sources:
+        #     if papers_collected >= self.max_papers:
+        #         break
                 
-            logger.info(f"Collecting papers from {source}")
+        #     logger.info(f"Collecting papers from {source}")
             
-            # Use the appropriate collection method based on the source
-            if source == 'arxiv':
-                self._collect_from_arxiv(papers_per_source)
-            elif source == 'google_scholar':
-                self._collect_from_google_scholar(papers_per_source)
-            elif source == 'ieee':
-                self._collect_from_ieee(papers_per_source)
-            else:
-                logger.warning(f"Unknown source: {source}")
+        #     # Use the appropriate collection method based on the source
+        #     if source == 'arxiv':
+        #         self._collect_from_arxiv(papers_per_source)
+        #     elif source == 'google_scholar':
+        #         self._collect_from_google_scholar(papers_per_source)
+        #     elif source == 'ieee':
+        #         self._collect_from_ieee(papers_per_source)
+        #     else:
+        #         logger.warning(f"Unknown source: {source}")
                 
-            papers_collected = len(self.literature_data['papers'])
-            logger.info(f"Total papers collected so far: {papers_collected}")
-            
+        #     papers_collected = len(self.literature_data['papers'])
+        #     logger.info(f"Total papers collected so far: {papers_collected}")
+
+        papers_collected = len(self.literature_data['papers'])
+        logger.info(f"Total papers collected so far: {papers_collected}")
         # Get more detailed information for each paper using OpenAI
         self._generate_paper_summaries()
             
@@ -182,10 +293,8 @@ class LiteratureCollector:
                         "id": result.entry_id.split('/')[-1],
                         "categories": result.categories
                     }
-                    
                     # Add paper to the collection
                     self.literature_data['papers'].append(paper)
-                    
                     # Stop if we have enough papers
                     if len(self.literature_data['papers']) >= self.max_papers:
                         break

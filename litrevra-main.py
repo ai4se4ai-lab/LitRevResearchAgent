@@ -77,6 +77,7 @@ def main():
     else:
         literature_data = load_saved_result(args.output_dir, 1, "literature_data.json")
     
+    return 0
     # Phase 2: Analysis and Planning
     if args.phase <= 2 <= args.end_phase and 2 not in skip_phases:
         logger.info("Starting Phase 2: Analysis and Planning")

@@ -34,10 +34,10 @@ LitRevRA follows a structured seven-phase workflow:
 
 ### Setup
 
-1. Clone the repository:
+1. Install Agent Development Kit (ADK) and LiteLLM::
    ```bash
-   git clone https://github.com/yourusername/litrevra.git
-   cd litrevra
+   pip install google-adk
+   pip install litellm
    ```
 
 2. Create and activate a virtual environment:
