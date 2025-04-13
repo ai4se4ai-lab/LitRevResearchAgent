@@ -326,7 +326,7 @@ class LiteratureCollector:
                 # Get the specified number of results
                 count = 0
                 for result in search_query:
-                    if count >= max_papers:
+                    if count >= self.max_papers:
                         break
                         
                     # Check if the year is within the specified range
